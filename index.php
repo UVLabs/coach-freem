@@ -37,7 +37,7 @@ function init(ServerRequestInterface $request): string
         return 'no user data';
     }
 
-    $user_data['is_premium'] = $body['objects']['install'] ?? false; // Using this to decide how to tag contacts.
+    $user_data['is_premium'] = $body['objects']['install']['is_premium'] ?? false; // Using this to decide how to tag contacts.
 
     $plugin_id = $body['plugin_id'] ?? '';
 
@@ -55,10 +55,10 @@ function init(ServerRequestInterface $request): string
         $tags = contactTags();
 
         $contactCreate = new CreateContact($plugin_id);
-        $contactCreate->setCustomMappings($custom_mappings);
-        $contactCreate->setSegments($segments);
-        $contactCreate->setTags($tags);
-        $id = $contactCreate->add($user_data);
+        $id = $contactCreate->setCustomMappings($custom_mappings)
+            ->setSegments($segments)
+            ->setTags($tags)
+            ->add($user_data);
 
         break;
     case 'install.deactivated':

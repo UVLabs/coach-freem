@@ -58,9 +58,9 @@ class Create extends BaseContacts
     /**
      * Class constructor.
      * 
-     * @param int $plugin_id 
+     * @param  int $plugin_id 
      * @return void 
-     * @since 1.0.0
+     * @since  1.0.0
      */
     public function __construct(int $plugin_id)
     {
@@ -165,9 +165,10 @@ class Create extends BaseContacts
      * @return void 
      * @since  1.0.0
      */
-    public function setSegments(array $segments): void
+    public function setSegments(array $segments): object
     {
         $this->segments = $segments;
+        return $this;
     }
 
     /**
@@ -177,20 +178,22 @@ class Create extends BaseContacts
      * @return void 
      * @since  1.0.0
      */
-    public function setTags(array $tags): void
+    public function setTags(array $tags): object
     {
         $this->tags = $tags;
+        return $this;
     }
 
     /**
      * Set our custom mappings.
      * 
      * @param  mixed $mapping 
-     * @return void 
+     * @return object 
      */
-    public function setCustomMappings(array $mapping): void
+    public function setCustomMappings(array $mapping): object
     {
         $this->custom_mappings = $mapping;
+        return $this;
     }
 
     /**
