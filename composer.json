@@ -1,0 +1,29 @@
+{
+    "name": "uvlabs/coach-freem",
+    "description": "Middleware between Freemius webhooks and Mautic API.",
+    "type": "library",
+    "require": {
+        "google/cloud-functions-framework": "^1.1",
+        "mautic/api-library": "^3.1"
+    },
+    "license": "GPLv2",
+    "authors": [
+        {
+            "name": "Uriahs Victor"
+        }
+    ],
+    "autoload":{
+        "psr-4": {
+            "CoachFreem\\" : "includes/"
+        }
+    },
+    "scripts": {
+        "start": [
+           "Composer\\Config::disableProcessTimeout",
+           "FUNCTION_TARGET=init php -S localhost:${PORT:-8080} vendor/google/cloud-functions-framework/router.php"
+        ]
+    },
+    "require-dev": {
+        "spatie/ray": "^1.37"
+    }
+}
