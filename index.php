@@ -10,7 +10,7 @@
  * Created on:      29/03/2023 (d/m/y)
  *
  * @link    https://uriahsvictor.com
- * @since   1.0.0
+ * @since   1.0.1
  * @license GPLv2
  */
 
@@ -53,12 +53,13 @@ function init(ServerRequestInterface $request): string
         $custom_mappings = customContactDataMappings();
         $segments = contactSegments();
         $tags = contactTags();
+        $excluded_emails = excludedEmails();
 
         $contactCreate = new CreateContact($plugin_id);
         $id = $contactCreate->setCustomMappings($custom_mappings)
             ->setSegments($segments)
             ->setTags($tags)
-            ->add($user_data);
+            ->add($user_data, $excluded_emails);
 
         break;
     case 'install.deactivated':
@@ -68,8 +69,14 @@ function init(ServerRequestInterface $request): string
         break;
     }
 
-    // In production you might probably just want to send back an empty string...
-    return ($id) ?: "The username and password set for the Client is probably wrong. Or the URL you set for the Mautic API is wrong.";
+    /**
+     * This will return null if: 
+     * 
+     * The username and password set for the Client is wrong. 
+     * The URL you set for the Mautic API is wrong.
+     * The contact email is in the excluded list.
+     */
+    return json_encode($id);
 }
 
 // ------ 
@@ -100,7 +107,7 @@ function customContactDataMappings(): array
         '11538' => array( // Add other plugins you own.
             'id' => 'freemius_id',
             'gross' => 'dps_gross',
-        )
+        ),
         // You can add further plugin IDs and their mappings.
     );
 
@@ -125,7 +132,8 @@ function contactSegments(): array
         ),
         '11538' => array( // Add other plugins you own.
             3
-        )
+        ),
+        // You can add further plugin IDs and their mappings.
     );
 
 }
@@ -156,7 +164,20 @@ function contactTags(): array
                 'dps-pro-user'
             ),
             'dps-user'
-        )
+        ),
+        // You can add further plugin IDs and their mappings.
+    );
+}
+
+/**
+ * Email addresses that should be excluded from being added to mautic.
+ * 
+ * @return array 
+ * @since  1.0.1
+ */
+function excludedEmails(): array
+{
+    return array(
     );
 }
 

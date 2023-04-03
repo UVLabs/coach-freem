@@ -103,6 +103,23 @@ class Create extends BaseContacts
     }
     
     /**
+     * Stop adding a contact if they're in our exlcuded list.
+     * 
+     * @param  mixed $user_data 
+     * @return array 
+     * @since  1.0.1
+     */
+    private function dropExcludedEmails($user_data, $excluded_emails): array
+    {
+        $user_email = $user_data['email'] ?? '';
+        if(in_array($user_email, $excluded_emails) || empty($user_email)) {
+            return array();
+        }
+        
+        return $user_data;
+    }
+
+    /**
      * Adds the contact to Mautic.
      * 
      * @param  mixed $user_data 
@@ -204,15 +221,19 @@ class Create extends BaseContacts
      * @return void 
      * @since  1.0.0
      */
-    public function add(array $user_data, array $custom_mappings = array()): ?int
+    public function add(array $user_data, array $excluded_emails = array()): ?int
     {
 
         if(empty($user_data['is_marketing_allowed']) ) {
             return null; // Only opted in contacts please...
         }
 
-        $id = $this->addContactToMautic($user_data);
+        $user_data = $this->dropExcludedEmails($user_data, $excluded_emails);
+        if(empty($user_data)) {
+            return null;
+        }
 
+        $id = $this->addContactToMautic($user_data);
         if(empty($id)) {
             return null;
         }
