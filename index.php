@@ -279,6 +279,10 @@ function excludedTLDs(): array
         'wpmudev.host',
         'websitepro-staging.com',
         'websitepro.hosting',
+        'wpengine.com',
+        'pantheonsite.io',
+        'kinsta.com',
+        'kinsta.cloud'
     );
 }
 
