@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Coach Freem adds contacts to Mautic when they install a freemius plugin. 
  *
@@ -12,9 +13,11 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
+ * @version 1.1.0
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
+use CoachFreem\Contacts\Update as UpdateContact;
 use Google\CloudFunctions\FunctionsFramework;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -33,7 +36,7 @@ function init(ServerRequestInterface $request): string
 
     $user_data = $body['objects']['user'] ?? '';
 
-    if(empty($user_data)) {
+    if (empty($user_data)) {
         return 'no user data';
     }
 
@@ -41,32 +44,68 @@ function init(ServerRequestInterface $request): string
 
     $plugin_id = $body['plugin_id'] ?? '';
 
-    if(empty($plugin_id)) {
+    if (empty($plugin_id)) {
         return 'plugin id empty';
     }
-    
+
     $event_type = $body['type'] ?? '';
 
+    /**
+     * Bail if email is excluded.
+     */
+    $user_email = $user_data['email'] ?? '';
+    if (in_array($user_email, excludedEmails()) || empty($user_email)) {
+        return 'excluded';
+    }
+
+    $contactCreate = new CreateContact($plugin_id);
+    $contactUpdate = new UpdateContact($user_data);
+
     switch ($event_type) {
-    case 'install.installed':
+        case 'install.installed': // Plugin Installed
 
-        $custom_mappings = customContactDataMappings();
-        $segments = contactSegments();
-        $tags = contactTags();
-        $excluded_emails = excludedEmails();
+            $custom_mappings = customContactDataMappings();
+            $segments = contactSegments();
+            $tags = contactTags();
 
-        $contactCreate = new CreateContact($plugin_id);
-        $id = $contactCreate->setCustomMappings($custom_mappings)
-            ->setSegments($segments)
-            ->setTags($tags)
-            ->add($user_data, $excluded_emails);
+            $contactCreate->setCustomMappings($custom_mappings)
+                ->setSegments($segments)
+                ->setTags($tags)
+                ->add($user_data);
 
-        break;
-    case 'install.deactivated':
-    case 'install.uninstalled':
-    default:
-        $id = 0;
-        break;
+            $id = $contactUpdate->updateContactTags(array('installed'), array('uninstalled'));
+            break;
+        case 'license.activated': // Add pro tag and remove free tag
+
+            $free_tags = contactTags()[$plugin_id]['free-users-tags'];
+            $premium_tags = contactTags()[$plugin_id]['premium-users-tags'];
+
+            $id = $contactUpdate->updateContactTags($premium_tags, $free_tags);
+            break;
+        case 'license.deactivated': // Add free tag and remove pro tag
+        case 'license.expired': // Add free tag and remove pro tag
+
+            $free_tags = contactTags()[$plugin_id]['free-users-tags'];
+            $premium_tags = contactTags()[$plugin_id]['premium-users-tags'];
+
+            $id = $contactUpdate->updateContactTags($free_tags, $premium_tags);
+            break;
+        case 'install.activated': // Plugin activated
+
+            $id = $contactUpdate->updateContactTags(array('activated'), array('deactivated'));
+            break;
+        case 'install.deactivated': // Plugin deactivated
+
+            $id = $contactUpdate->updateContactTags(array('deactivated'), array('activated'));
+            break;
+        case 'install.uninstalled': // Plugin uninstalled
+
+            $id = $contactUpdate->updateContactTags(array('uninstalled'), array('installed', 'activated', 'deactivated'));
+            break;
+        default:
+
+            $id = 0;
+            break;
     }
 
     /**
@@ -98,19 +137,23 @@ function init(ServerRequestInterface $request): string
  */
 function customContactDataMappings(): array
 {
-
+    /**
+     * Edit this array with your current plugin ids.
+     */
     return array(
-        '8507' => array( // Edit this ID with your plugin ID.
+        '8507' => array(
             'id' => 'freemius_id',
             'gross' => 'kikote_gross',
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             'id' => 'freemius_id',
             'gross' => 'dps_gross',
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            'id' => 'freemius_id',
+            'gross' => 'printus_gross',
+        ),
     );
-
 }
 
 /**
@@ -125,17 +168,20 @@ function customContactDataMappings(): array
  */
 function contactSegments(): array
 {
-
-    return array (
+    /**
+     * Edit this array with your current plugin ids.
+     */
+    return array(
         '8507' => array( // Edit this ID with your plugin ID.
             2, // The segment ID to add the contact to.
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             3
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            4
+        ),
     );
-
 }
 
 /**
@@ -146,6 +192,9 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
+    /**
+     * Edit this array with your current plugin ids.
+     */
     return array(
         '8507' => array( // Edit this ID with your plugin ID
             'free-users-tags' => array(
@@ -156,7 +205,7 @@ function contactTags(): array
             ),
             'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             'free-users-tags' => array(
                 'dps-free-user'
             ),
@@ -165,7 +214,15 @@ function contactTags(): array
             ),
             'dps-user'
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            'free-users-tags' => array(
+                'printus-free-user'
+            ),
+            'premium-users-tags' => array(
+                'printus-pro-user'
+            ),
+            'printus-user'
+        ),
     );
 }
 
@@ -178,6 +235,6 @@ function contactTags(): array
 function excludedEmails(): array
 {
     return array(
+        'plugins@soaringleads.com',
     );
 }
-

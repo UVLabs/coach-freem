@@ -1,6 +1,7 @@
 <?php
+
 /**
- * Class responsible for creating contacts.
+ * Class responsible for creating Contacts.
  *
  * Author:          Uriahs Victor
  * Created on:      28/03/2023 (d/m/y)
@@ -18,7 +19,7 @@ use CoachFreem\Segments\Base as BaseSegments;
 /**
  * Create a contact.
  * 
- * @package Includes
+ * @package @package CoachFreem\Contacts
  * @since   1.0.0
  */
 class Create extends BaseContacts
@@ -76,47 +77,30 @@ class Create extends BaseContacts
      * @return array 
      * @since  1.0.0
      */
-    private function mapWebHookData(array $user_data) : array
+    private function mapWebHookData(array $user_data): array
     {
         $mautic_field_list = $this->client->getFieldList();
         $plugin_custom_mappings = $this->custom_mappings[$this->plugin_id];
 
         $hold = array();
 
-        foreach($mautic_field_list as $index => $data){
+        foreach ($mautic_field_list as $index => $data) {
 
             $field_name = $data['alias'] ?? '';
 
-            if(empty($field_name)) {
+            if (empty($field_name)) {
                 continue;
             }
-     
+
             $hold[$field_name] = $user_data[$field_name] ?? '';
 
             $mapping = array_search($field_name, $plugin_custom_mappings, true);
-            if(!empty($mapping) ) {
+            if (!empty($mapping)) {
                 $hold[$field_name] = $user_data[$mapping];
             }
-         
         }
+
         return $hold;
-    }
-    
-    /**
-     * Stop adding a contact if they're in our exlcuded list.
-     * 
-     * @param  mixed $user_data 
-     * @return array 
-     * @since  1.0.1
-     */
-    private function dropExcludedEmails($user_data, $excluded_emails): array
-    {
-        $user_email = $user_data['email'] ?? '';
-        if(in_array($user_email, $excluded_emails) || empty($user_email)) {
-            return array();
-        }
-        
-        return $user_data;
     }
 
     /**
@@ -126,7 +110,7 @@ class Create extends BaseContacts
      * @return null|int 
      * @since  1.0
      */
-    private function addContactToMautic( $user_data ): ?int
+    private function addContactToMautic($user_data): ?int
     {
         $contact_data = $this->mapWebHookData($user_data);
         $contact_data['tags'] = $this->prepareContactTags($user_data);
@@ -144,7 +128,6 @@ class Create extends BaseContacts
      */
     private function prepareContactTags(array $user_data): array
     {
-
         $all_tags = $this->tags[$this->plugin_id];
 
         $premium_tags = $all_tags['premium-users-tags'] ?? array();
@@ -152,7 +135,7 @@ class Create extends BaseContacts
 
         $free_tags = $all_tags['free-users-tags'] ?? array();
         unset($all_tags['free-users-tags']); // remove free tags once you've got hold of them.
-    
+
         $applicable_tags = ($user_data['is_premium']) ?  $premium_tags : $free_tags;
 
         return array_merge($applicable_tags, $all_tags); // Add any miscellenous tags that was set in our tags array.
@@ -170,7 +153,7 @@ class Create extends BaseContacts
         $segments = $this->segments[$this->plugin_id];
         $segments_client = (new BaseSegments)->client;
 
-        foreach($segments as $segment_id){
+        foreach ($segments as $segment_id) {
             $segments_client->addContact($segment_id, $contact_id);
         }
     }
@@ -216,25 +199,19 @@ class Create extends BaseContacts
     /**
      * Create a contact in the Mautic install.
      * 
-     * @param  array $data 
-     * @param  array $custom_mappings 
+     * @param  array $user_data 
      * @return void 
      * @since  1.0.0
      */
-    public function add(array $user_data, array $excluded_emails = array()): ?int
+    public function add(array $user_data): ?int
     {
 
-        if(empty($user_data['is_marketing_allowed']) ) {
+        if (empty($user_data['is_marketing_allowed'])) {
             return null; // Only opted in contacts please...
         }
 
-        $user_data = $this->dropExcludedEmails($user_data, $excluded_emails);
-        if(empty($user_data)) {
-            return null;
-        }
-
         $id = $this->addContactToMautic($user_data);
-        if(empty($id)) {
+        if (empty($id)) {
             return null;
         }
 
@@ -242,6 +219,4 @@ class Create extends BaseContacts
 
         return $id;
     }
-    
-
 }
