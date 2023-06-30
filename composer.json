@@ -21,7 +21,8 @@
         "start": [
            "Composer\\Config::disableProcessTimeout",
            "FUNCTION_TARGET=init php -S localhost:${PORT:-8080} vendor/google/cloud-functions-framework/router.php"
-        ]
+        ],
+        "redeploy": "gcloud functions deploy coach-freem --gen2 --project=freemius-related"
     },
     "require-dev": {
         "spatie/ray": "^1.37"
