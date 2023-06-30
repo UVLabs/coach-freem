@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Class responsible for creating contacts.
+ * Class responsible for creating Contacts.
  *
  * Author:          Uriahs Victor
  * Created on:      28/03/2023 (d/m/y)
