@@ -244,7 +244,7 @@ function contactTags(): array
 function excludedEmails(): array
 {
     return array(
-        // 'plugins@soaringleads.com',
+        'plugins@soaringleads.com',
     );
 }
 
