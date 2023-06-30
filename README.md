@@ -72,6 +72,8 @@ The following functions inside `index.php` should be edited to match your plugin
 - customContactDataMappings()
 - contactSegments()
 - contactTags()
+- excludedTLDs()
+- isExcludedTLD()
 
 Comments have been added to help explain how these functions should be edited. If comments can be made better then feel free to submit a pull request! 
 
