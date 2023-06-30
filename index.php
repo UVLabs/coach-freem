@@ -40,7 +40,8 @@ function init(ServerRequestInterface $request): string
         return 'no user data';
     }
 
-    $user_data['is_premium'] = $body['objects']['install']['is_premium'] ?? false; // Using this to decide how to tag contacts.
+    $install = $body['objects']['install'] ?? array();
+    $user_data['is_premium'] = $install['is_premium'] ?? false; // Using this to decide how to tag contacts.
 
     $plugin_id = $body['plugin_id'] ?? '';
 
@@ -55,7 +56,15 @@ function init(ServerRequestInterface $request): string
      */
     $user_email = $user_data['email'] ?? '';
     if (in_array($user_email, excludedEmails()) || empty($user_email)) {
-        return 'excluded';
+        return 'excluded email';
+    }
+
+    /**
+     * Bail if TLD is excluded.
+     */
+    $domain = $install['url'] ?? '';
+    if (isExcludedTLD($domain)) {
+        return "development domain";
     }
 
     $contactCreate = new CreateContact($plugin_id);
@@ -235,6 +244,57 @@ function contactTags(): array
 function excludedEmails(): array
 {
     return array(
-        'plugins@soaringleads.com',
+        // 'plugins@soaringleads.com',
     );
+}
+
+/**
+ * List of excluded domains.
+ * 
+ * Sites with these domains should not be processed. These are typically development sites so we shouldn't be updating
+ * user tags or processing those webhooks.
+ * 
+ * @return array 
+ * @since 1.1.1
+ */
+function excludedTLDs(): array
+{
+    return array(
+        'local',
+        'dev',
+        'instawp.xyz',
+        'instawp.co',
+        'instawp.link',
+        'dev.cc',
+        'test',
+        'staging',
+        'example',
+        'invalid',
+        'myftpupload.com',
+        'cloudwaysapps.com',
+        'wpsandbox.pro',
+        'ngrok.io',
+        'mystagingwebsite.com',
+        'tempurl.host',
+        'wpmudev.host',
+        'websitepro-staging.com',
+        'websitepro.hosting',
+    );
+}
+
+/**
+ * Check if a TLD is excluded.
+ * 
+ * @param string $url 
+ * @return bool 
+ * @since 1.1.1
+ */
+function isExcludedTLD(string $url): bool
+{
+    $excluded_tlds = excludedTLDs();
+
+    $parts = explode('.', $url, 2);
+    $tld = $parts[1] ?? array();
+
+    return in_array($tld, $excluded_tlds, true);
 }
