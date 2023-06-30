@@ -137,17 +137,22 @@ function init(ServerRequestInterface $request): string
  */
 function customContactDataMappings(): array
 {
-
+    /**
+     * Edit this array with your current plugin ids.
+     */
     return array(
-        '8507' => array( // Edit this ID with your plugin ID.
+        '8507' => array(
             'id' => 'freemius_id',
             'gross' => 'kikote_gross',
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             'id' => 'freemius_id',
             'gross' => 'dps_gross',
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            'id' => 'freemius_id',
+            'gross' => 'printus_gross',
+        ),
     );
 }
 
@@ -163,14 +168,19 @@ function customContactDataMappings(): array
  */
 function contactSegments(): array
 {
+    /**
+     * Edit this array with your current plugin ids.
+     */
     return array(
         '8507' => array( // Edit this ID with your plugin ID.
             2, // The segment ID to add the contact to.
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             3
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            4
+        ),
     );
 }
 
@@ -182,6 +192,9 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
+    /**
+     * Edit this array with your current plugin ids.
+     */
     return array(
         '8507' => array( // Edit this ID with your plugin ID
             'free-users-tags' => array(
@@ -192,7 +205,7 @@ function contactTags(): array
             ),
             'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
         ),
-        '11538' => array( // Add other plugins you own.
+        '11538' => array(
             'free-users-tags' => array(
                 'dps-free-user'
             ),
@@ -201,7 +214,15 @@ function contactTags(): array
             ),
             'dps-user'
         ),
-        // You can add further plugin IDs and their mappings.
+        '12321' => array(
+            'free-users-tags' => array(
+                'printus-free-user'
+            ),
+            'premium-users-tags' => array(
+                'printus-pro-user'
+            ),
+            'printus-user'
+        ),
     );
 }
 
