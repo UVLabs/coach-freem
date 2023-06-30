@@ -83,3 +83,4 @@ Well...I put this together to *just* get some automation set up for Mautic to fu
 Missing:
 
 - Handle when a user opts out of marketing.
+- Ignore Local sites (create TLD blacklist like .local, .dev etc)
