@@ -2,7 +2,7 @@
 
 Coach Freem receives your webhooks from Freemius, dusts them off, gives them a pep talk, and then sends them off to Mautic (he doesn't know that he's an app).
 
-# Why 🤷🏾‍♂️
+# Why 🤷
 
 Because automation.
 
@@ -69,6 +69,7 @@ In the image above you can see that we're sending all events to https://webhook.
 
 The following functions inside `index.php` should be edited to match your plugin and mautic details:
 
+- productIDs()
 - customContactDataMappings()
 - contactSegments()
 - contactTags()

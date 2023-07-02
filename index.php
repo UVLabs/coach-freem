@@ -13,7 +13,7 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
- * @version 1.1.0
+ * @version 1.1.2
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
@@ -69,6 +69,19 @@ function init(ServerRequestInterface $request): string
 
     $contactCreate = new CreateContact($plugin_id);
     $contactUpdate = new UpdateContact($user_data);
+    $product = array_flip(productIDs())[$plugin_id] ?? '';
+
+    /**
+     * Bail if the plugin ID received is not in the array provided in productIDs()
+     */
+    if (empty($product)) {
+        return "product id not found in array";
+    }
+
+    $installed_tag = $product . '-installed';
+    $uninstalled_tag = $product . '-uninstalled';
+    $activated_tag = $product . '-activated';
+    $deactivated_tag = $product . '-deactivated';
 
     switch ($event_type) {
         case 'install.installed': // Plugin Installed
@@ -76,13 +89,12 @@ function init(ServerRequestInterface $request): string
             $custom_mappings = customContactDataMappings();
             $segments = contactSegments();
             $tags = contactTags();
-
             $contactCreate->setCustomMappings($custom_mappings)
                 ->setSegments($segments)
                 ->setTags($tags)
                 ->add($user_data);
 
-            $id = $contactUpdate->updateContactTags(array('installed'), array('uninstalled'));
+            $id = $contactUpdate->updateContactTags(array($installed_tag), array($uninstalled_tag));
             break;
         case 'license.activated': // Add pro tag and remove free tag
 
@@ -101,15 +113,15 @@ function init(ServerRequestInterface $request): string
             break;
         case 'install.activated': // Plugin activated
 
-            $id = $contactUpdate->updateContactTags(array('activated'), array('deactivated'));
+            $id = $contactUpdate->updateContactTags(array($activated_tag), array($deactivated_tag));
             break;
         case 'install.deactivated': // Plugin deactivated
 
-            $id = $contactUpdate->updateContactTags(array('deactivated'), array('activated'));
+            $id = $contactUpdate->updateContactTags(array($deactivated_tag), array($activated_tag));
             break;
         case 'install.uninstalled': // Plugin uninstalled
 
-            $id = $contactUpdate->updateContactTags(array('uninstalled'), array('installed', 'activated', 'deactivated'));
+            $id = $contactUpdate->updateContactTags(array($uninstalled_tag), array($installed_tag, $activated_tag, $deactivated_tag));
             break;
         default:
 
@@ -134,31 +146,52 @@ function init(ServerRequestInterface $request): string
 // ------ 
 
 /**
+ * Product IDs retrieved from Freemius.
+ * 
+ * Replace the product key and values below with your own products.
+ * Be sure to make the relevant modifications in customContactDataMappings(), contactSegments() and contactTags() to reflect the changes.
+ * 
+ * @return array 
+ * @since 1.1.2
+ */
+function productIDs(): array
+{
+    return array(
+        'kikote' => 8507,
+        'dps' => 11538,
+        'printus' => 12321,
+    );
+}
+
+/**
  * Custom mappings for Freemius data sent to Mautic API.
  * 
  * This is useful if you have a custom field inside Mautic that isn't the same name as the one being sent by Freemius. 
  * Use the Plugin ID to differenciate mappings if you have multiple Freemius plugins, and you are sending all of their webhooks Coach Freem. 
  * 
  * Note that for "gross" in this example, I am mapping it to "kikote_gross" which is a custom field I created in Mautic to track the Gross of that plugin for a contact.
+ * You'd have to first create your custom field inside Mautic before being able to assign custom data to it.
  * 
  * @return array 
  * @since  1.0.0
  */
 function customContactDataMappings(): array
 {
+    $product_id = productIDs();
+
     /**
      * Edit this array with your current plugin ids.
      */
     return array(
-        '8507' => array(
+        $product_id['kikote'] => array(
             'id' => 'freemius_id',
             'gross' => 'kikote_gross',
         ),
-        '11538' => array(
+        $product_id['dps'] => array(
             'id' => 'freemius_id',
             'gross' => 'dps_gross',
         ),
-        '12321' => array(
+        $product_id['printus'] => array(
             'id' => 'freemius_id',
             'gross' => 'printus_gross',
         ),
@@ -177,17 +210,19 @@ function customContactDataMappings(): array
  */
 function contactSegments(): array
 {
+    $product_id = productIDs();
+
     /**
      * Edit this array with your current plugin ids.
      */
     return array(
-        '8507' => array( // Edit this ID with your plugin ID.
+        $product_id['kikote'] => array( // Edit this ID with your plugin ID.
             2, // The segment ID to add the contact to.
         ),
-        '11538' => array(
+        $product_id['dps'] => array(
             3
         ),
-        '12321' => array(
+        $product_id['printus'] => array(
             4
         ),
     );
@@ -201,11 +236,13 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
+    $product_id = productIDs();
+
     /**
      * Edit this array with your current plugin ids.
      */
     return array(
-        '8507' => array( // Edit this ID with your plugin ID
+        $product_id['kikote'] => array( // Edit this ID with your plugin ID
             'free-users-tags' => array(
                 'kikote-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
             ),
@@ -214,7 +251,7 @@ function contactTags(): array
             ),
             'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
         ),
-        '11538' => array(
+        $product_id['dps'] => array(
             'free-users-tags' => array(
                 'dps-free-user'
             ),
@@ -223,7 +260,7 @@ function contactTags(): array
             ),
             'dps-user'
         ),
-        '12321' => array(
+        $product_id['printus'] => array(
             'free-users-tags' => array(
                 'printus-free-user'
             ),
@@ -261,6 +298,8 @@ function excludedTLDs(): array
 {
     return array(
         'local',
+        'localhost',
+        'host',
         'dev',
         'instawp.xyz',
         'instawp.co',
