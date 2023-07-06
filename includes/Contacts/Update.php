@@ -57,6 +57,9 @@ class Update extends BaseContacts
 	{
 		$email = $this->user_data['email'];
 		$contact_details = $this->findContactDetailsByEmail($email);
+		if (empty($contact_details)) {
+			return 0;
+		}
 		$contact_id = $contact_details['id'];
 		$contact_current_tags = array_column($contact_details['tags'], 'tag');
 

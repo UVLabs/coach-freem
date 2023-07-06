@@ -13,7 +13,7 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
- * @version 1.1.2
+ * @version 1.1.3
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
@@ -89,6 +89,7 @@ function init(ServerRequestInterface $request): string
             $custom_mappings = customContactDataMappings();
             $segments = contactSegments();
             $tags = contactTags();
+
             $contactCreate->setCustomMappings($custom_mappings)
                 ->setSegments($segments)
                 ->setTags($tags)
