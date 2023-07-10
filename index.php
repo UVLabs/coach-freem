@@ -13,31 +13,32 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
- * @version 1.1.3
+ * @version 1.2.0
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
 use CoachFreem\Contacts\Update as UpdateContact;
-use Google\CloudFunctions\FunctionsFramework;
-use Psr\Http\Message\ServerRequestInterface;
 
+define('ABSPATH', dirname(__FILE__));
+require 'vendor/autoload.php';
+init();
 
-// Register the function with Functions Framework.
-// This enables omitting the `FUNCTIONS_SIGNATURE_TYPE=http` environment
-// variable when deploying. The `FUNCTION_TARGET` environment variable should
-// match the first parameter.
-FunctionsFramework::http('init', 'init');
-
-function init(ServerRequestInterface $request): string
+/**
+ * Entry function that bootstraps everything.
+ * 
+ * @return string 
+ * @since 1.0.0
+ */
+function init(): string
 {
 
-    $body = $request->getBody()->getContents();
+    $body = file_get_contents("php://input");
     $body = json_decode($body, true);
 
     $user_data = $body['objects']['user'] ?? '';
 
     if (empty($user_data)) {
-        return 'no user data';
+        exit('no user data');
     }
 
     $install = $body['objects']['install'] ?? array();
@@ -46,7 +47,7 @@ function init(ServerRequestInterface $request): string
     $plugin_id = $body['plugin_id'] ?? '';
 
     if (empty($plugin_id)) {
-        return 'plugin id empty';
+        exit('plugin id empty');
     }
 
     $event_type = $body['type'] ?? '';
@@ -56,7 +57,7 @@ function init(ServerRequestInterface $request): string
      */
     $user_email = $user_data['email'] ?? '';
     if (in_array($user_email, excludedEmails()) || empty($user_email)) {
-        return 'excluded email';
+        exit('excluded email');
     }
 
     /**
@@ -64,7 +65,7 @@ function init(ServerRequestInterface $request): string
      */
     $domain = $install['url'] ?? '';
     if (isExcludedTLD($domain)) {
-        return "development domain";
+        exit("development domain");
     }
 
     $contactCreate = new CreateContact($plugin_id);
@@ -75,7 +76,7 @@ function init(ServerRequestInterface $request): string
      * Bail if the plugin ID received is not in the array provided in productIDs()
      */
     if (empty($product)) {
-        return "product id not found in array";
+        exit("product id not found in array");
     }
 
     $installed_tag = $product . '-installed';
@@ -131,13 +132,13 @@ function init(ServerRequestInterface $request): string
     }
 
     /**
-     * This will return null if: 
+     * This will exit null if: 
      * 
      * The username and password set for the Client is wrong. 
      * The URL you set for the Mautic API is wrong.
      * The contact email is in the excluded list.
      */
-    return json_encode($id);
+    exit(json_encode($id));
 }
 
 // ------ 
@@ -178,25 +179,21 @@ function productIDs(): array
  */
 function customContactDataMappings(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
-     * Edit this array with your current plugin ids.
+     * Edit the $hold array with your custom mappings.
      */
-    return array(
-        $product_id['kikote'] => array(
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'id' => 'freemius_id',
-            'gross' => 'kikote_gross',
-        ),
-        $product_id['dps'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'dps_gross',
-        ),
-        $product_id['printus'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'printus_gross',
-        ),
-    );
+            'gross' => $product_name . '_gross',
+        );
+    }
+
+    return $hold;
 }
 
 /**
@@ -237,40 +234,26 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
      * Edit this array with your current plugin ids.
      */
-    return array(
-        $product_id['kikote'] => array( // Edit this ID with your plugin ID
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'free-users-tags' => array(
-                'kikote-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
+                $product_name . '-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
             ),
             'premium-users-tags' => array(
-                'kikote-pro-user' // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
+                $product_name . '-pro-user', // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
             ),
-            'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
-        ),
-        $product_id['dps'] => array(
-            'free-users-tags' => array(
-                'dps-free-user'
-            ),
-            'premium-users-tags' => array(
-                'dps-pro-user'
-            ),
-            'dps-user'
-        ),
-        $product_id['printus'] => array(
-            'free-users-tags' => array(
-                'printus-free-user'
-            ),
-            'premium-users-tags' => array(
-                'printus-pro-user'
-            ),
-            'printus-user'
-        ),
-    );
+            $product_name . '-user'  // You can set additional tags that you want attached to a contact other than the free/pro ones.
+        );
+    }
+
+    return $hold;
 }
 
 /**
@@ -304,6 +287,7 @@ function excludedTLDs(): array
         'dev',
         'instawp.xyz',
         'instawp.co',
+        'instawp.com',
         'instawp.link',
         'dev.cc',
         'test',
