@@ -305,6 +305,7 @@ function excludedTLDs(): array
         'dev',
         'instawp.xyz',
         'instawp.co',
+        'instawp.com',
         'instawp.link',
         'dev.cc',
         'test',
