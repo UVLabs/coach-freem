@@ -60,6 +60,9 @@ class Base
   protected function findContactDetailsByEmail(string $email): array
   {
     $response = $this->client->getList($email);
+    if (!is_array($response) && empty($response)) {
+      return array();
+    }
     $id = array_key_first($response['contacts']);
     return $response['contacts'][$id] ?? array();
   }
