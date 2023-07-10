@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Mautic Client creation class.
  *
@@ -15,6 +16,7 @@ namespace CoachFreem;
 use Mautic\Api\Api;
 use Mautic\Auth\ApiAuth;
 use Mautic\MauticApi;
+use Dotenv\Dotenv;
 
 class Client
 {
@@ -47,17 +49,19 @@ class Client
     private function setClient($context)
     {
 
+        $dotenv = Dotenv::createImmutable(ABSPATH);
+        $dotenv->load();
         $settings = [
-        'userName'   => getenv('MAUTICAPIUSER'),    
-        'password'   => getenv('MAUTICAPIPW')
+            'userName'   => $_ENV['MAUTICAPIUSER'],
+            'password'   => $_ENV['MAUTICAPIPW']
         ];
 
-        $endpoint = getenv('MAUTICAPIURL');
+        $endpoint = $_ENV['MAUTICAPIURL'];
 
         try {
             $initAuth = new ApiAuth();
             $auth     = $initAuth->newAuth($settings, 'BasicAuth');
-       
+
             $api        = new MauticApi();
             return $api->newApi($context, $auth, $endpoint);
         } catch (\Throwable $th) {
@@ -77,5 +81,4 @@ class Client
     {
         return $this->setClient($this->context);
     }
-
 }
