@@ -19,8 +19,8 @@
 use CoachFreem\Contacts\Create as CreateContact;
 use CoachFreem\Contacts\Update as UpdateContact;
 
-require 'vendor/autoload.php';
 define('ABSPATH', dirname(__FILE__));
+require 'vendor/autoload.php';
 init();
 
 /**
@@ -179,25 +179,21 @@ function productIDs(): array
  */
 function customContactDataMappings(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
-     * Edit this array with your current plugin ids.
+     * Edit the $hold array with your custom mappings.
      */
-    return array(
-        $product_id['kikote'] => array(
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'id' => 'freemius_id',
-            'gross' => 'kikote_gross',
-        ),
-        $product_id['dps'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'dps_gross',
-        ),
-        $product_id['printus'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'printus_gross',
-        ),
-    );
+            'gross' => $product_name . '_gross',
+        );
+    }
+
+    return $hold;
 }
 
 /**
@@ -238,40 +234,26 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
      * Edit this array with your current plugin ids.
      */
-    return array(
-        $product_id['kikote'] => array( // Edit this ID with your plugin ID
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'free-users-tags' => array(
-                'kikote-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
+                $product_name . '-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
             ),
             'premium-users-tags' => array(
-                'kikote-pro-user' // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
+                $product_name . '-pro-user', // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
             ),
-            'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
-        ),
-        $product_id['dps'] => array(
-            'free-users-tags' => array(
-                'dps-free-user'
-            ),
-            'premium-users-tags' => array(
-                'dps-pro-user'
-            ),
-            'dps-user'
-        ),
-        $product_id['printus'] => array(
-            'free-users-tags' => array(
-                'printus-free-user'
-            ),
-            'premium-users-tags' => array(
-                'printus-pro-user'
-            ),
-            'printus-user'
-        ),
-    );
+            $product_name . '-user'  // You can set additional tags that you want attached to a contact other than the free/pro ones.
+        );
+    }
+
+    return $hold;
 }
 
 /**
