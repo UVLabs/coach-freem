@@ -14,6 +14,8 @@
 namespace CoachFreem\Contacts;
 
 use CoachFreem\Client;
+use CoachFreem\Logger;
+use Exception;
 
 /**
  * Base contacts class.
@@ -56,10 +58,16 @@ class Base
    * @param array $user_data 
    * @return array 
    * @since 1.1.0
+   * @throws Exception 
    */
   protected function findContactDetailsByEmail(string $email): array
   {
-    $response = $this->client->getList($email);
+    try {
+      $response = $this->client->getList($email);
+    } catch (\Throwable $th) {
+      Logger::log("Error checking existing contact. Email: $email, Error Msg: " . $th->getMessage());
+      return array();
+    }
     if (!is_array($response) && empty($response)) {
       return array();
     }

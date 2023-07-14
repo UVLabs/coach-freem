@@ -18,6 +18,7 @@
 
 use CoachFreem\Contacts\Create as CreateContact;
 use CoachFreem\Contacts\Update as UpdateContact;
+use CoachFreem\Logger;
 
 define('ABSPATH', dirname(__FILE__));
 require 'vendor/autoload.php';
@@ -26,10 +27,9 @@ init();
 /**
  * Entry function that bootstraps everything.
  * 
- * @return string 
  * @since 1.0.0
  */
-function init(): string
+function init()
 {
 
     $body = file_get_contents("php://input");
@@ -38,6 +38,7 @@ function init(): string
     $user_data = $body['objects']['user'] ?? '';
 
     if (empty($user_data)) {
+        Logger::log('No user data recieved in the webhook.');
         exit('no user data');
     }
 
@@ -47,6 +48,7 @@ function init(): string
     $plugin_id = $body['plugin_id'] ?? '';
 
     if (empty($plugin_id)) {
+        Logger::log('Plugin ID value in webhook is empty.', $body);
         exit('plugin id empty');
     }
 
@@ -57,6 +59,7 @@ function init(): string
      */
     $user_email = $user_data['email'] ?? '';
     if (in_array($user_email, excludedEmails()) || empty($user_email)) {
+        Logger::log("This email address is excluded. User email: $user_email");
         exit('excluded email');
     }
 
@@ -65,6 +68,7 @@ function init(): string
      */
     $domain = $install['url'] ?? '';
     if (isExcludedTLD($domain)) {
+        Logger::log("This is a development domain. Domain: $domain");
         exit("development domain");
     }
 
@@ -76,6 +80,7 @@ function init(): string
      * Bail if the plugin ID received is not in the array provided in productIDs()
      */
     if (empty($product)) {
+        Logger::log('This Product ID was not found in array of available IDs in productIDs() function.', $body);
         exit("product id not found in array");
     }
 
@@ -131,14 +136,15 @@ function init(): string
             break;
     }
 
+    http_response_code(200);
     /**
-     * This will exit null if: 
+     * This will be 0/null if: 
      * 
      * The username and password set for the Client is wrong. 
      * The URL you set for the Mautic API is wrong.
      * The contact email is in the excluded list.
      */
-    exit(json_encode($id));
+    echo json_encode($id);
 }
 
 // ------ 
