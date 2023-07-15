@@ -107,8 +107,8 @@ class Create extends BaseContacts
         // If contact exists already then update values.
         $existing_contact = $this->findContactDetailsByEmail($user_data['email']);
         if ($existing_contact) {
-            $contact = $this->client->edit($existing_contact['id'], $contact_data);
-            return $contact['id'] ?? null;
+            $contact_details = $this->client->edit($existing_contact['id'], $contact_data);
+            return $contact_details['contact']['id'] ?? null;
         }
 
         $contact_data['email'] = $user_data['email'];
@@ -215,7 +215,7 @@ class Create extends BaseContacts
 
         $id = $this->addContactToMautic($user_data);
         if (empty($id)) {
-            Logger::log("Empty constact ID received from Mautic API.");
+            Logger::log("Empty contact ID received from Mautic API.");
             return null;
         }
 
