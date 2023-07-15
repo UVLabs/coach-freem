@@ -65,7 +65,7 @@ class Client
             $api        = new MauticApi();
             return $api->newApi($context, $auth, $endpoint);
         } catch (\Throwable $th) {
-            //throw $th;
+            Logger::log('There was an issue setting up the Mautic API client. Error: ' . $th->getMessage());
         }
 
         return null;
