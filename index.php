@@ -35,11 +35,12 @@ function init()
 
     $body = file_get_contents("php://input");
     $body = json_decode($body, true);
+    $webhook_id = $body['id'] ?? '';
 
     $user_data = $body['objects']['user'] ?? '';
 
     if (empty($user_data)) {
-        Logger::log('No user data recieved in the webhook.');
+        Logger::log("No user data recieved in the webhook #$webhook_id");
         exit('no user data');
     }
 
@@ -149,7 +150,6 @@ function init()
 
     $time_end = microtime(true);
     $duration = $time_end - $time_start;
-    $webhook_id = $body['id'] ?? '';
     Logger::log("Webhook #$webhook_id execution duration: $duration");
 }
 
