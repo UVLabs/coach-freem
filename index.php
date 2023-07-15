@@ -31,6 +31,7 @@ init();
  */
 function init()
 {
+    $time_start = microtime(true);
 
     $body = file_get_contents("php://input");
     $body = json_decode($body, true);
@@ -145,6 +146,11 @@ function init()
      * The contact email is in the excluded list.
      */
     echo json_encode($id);
+
+    $time_end = microtime(true);
+    $duration = $time_end - $time_start;
+    $webhook_id = $body['id'] ?? '';
+    Logger::log("Webhook #$webhook_id execution duration: $duration");
 }
 
 // ------ 
