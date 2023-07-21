@@ -55,17 +55,21 @@ class Base
   /**
    * Get a contact details using email address.
    * 
-   * @param array $user_data 
+   * @param int $id The freemius ID. 
    * @return array 
    * @since 1.1.0
    * @throws Exception 
    */
-  protected function findContactDetailsByEmail(string $email): array
+  protected function findContactDetailsByFreemiusID(int $freemius_id): array
   {
     try {
-      $response = $this->client->getList($email);
+      $response = $this->client->getList(
+        "freemius_id:{$freemius_id}",
+        0,
+        1
+      );
     } catch (\Throwable $th) {
-      Logger::log("Error checking existing contact. Email: $email, Error Msg: " . $th->getMessage());
+      Logger::log("Error checking existing contact. Freemius ID: $freemius_id, Error Msg: " . $th->getMessage());
       return array();
     }
     if (!is_array($response) && empty($response)) {

@@ -105,7 +105,7 @@ class Create extends BaseContacts
         $contact_data['tags'] = $this->prepareContactTags($user_data);
 
         // If contact exists already then update values.
-        $existing_contact = $this->findContactDetailsByEmail($user_data['email']);
+        $existing_contact = $this->findContactDetailsByFreemiusID((int) $user_data['id']);
         if ($existing_contact) {
             $contact_details = $this->client->edit($existing_contact['id'], $contact_data);
             return $contact_details['contact']['id'] ?? null;
