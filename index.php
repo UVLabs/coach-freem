@@ -25,15 +25,110 @@ require 'vendor/autoload.php';
 init();
 
 /**
- * Entry function that bootstraps everything.
+ * Start Coach Freem.
  * 
- * @since 1.0.0
+ * @return void 
+ * @since 1.2.0
  */
 function init()
 {
+
+    $save = $_GET['save'] ?? false;
+    $process = $_GET['process'] ?? false;
+
+    if ($save) {
+        save_webhook();
+    }
+
+    if ($process) {
+        check_webhooks();
+    }
+}
+
+/**
+ * Save a webhook to the file system.
+ * 
+ * @return void 
+ * @since 1.2.0
+ */
+function save_webhook(): void
+{
+
     $time_start = microtime(true);
 
-    $body = file_get_contents("php://input");
+    $body_json = file_get_contents("php://input");
+
+    $body_array = json_decode($body_json, true);
+
+    $webhook_id = $body_array['id'] ?? time();
+
+    $name = "webhook_$webhook_id";
+    $saved = file_put_contents("./webhooks/$name.json", $body_json . PHP_EOL, LOCK_EX);
+
+    if ($saved) {
+        echo 'success';
+    } else {
+        Logger::log("There was an issue saving the webhook to file: #$webhook_id");
+        echo 'failed';
+        exit();
+    }
+
+    $time_end = microtime(true);
+    $duration = $time_end - $time_start;
+
+    Logger::log("Webhook #$webhook_id save duration: $duration");
+}
+
+/**
+ * Check saved webhooks and process one.
+ * 
+ * @return void 
+ * @since 1.2.0
+ */
+function check_webhooks(): void
+{
+
+    $webhook_files = array_diff(scandir('./webhooks/'), array('.', '..', '.gitkeep'));
+
+    if (empty($webhook_files)) {
+        exit('no pending webhooks found to process');
+    }
+
+    /**
+     * Grab random key so that if a webhook file has trouble processing we don't end up
+     * trying to process the same file over and over.
+     */
+    $filename = $webhook_files[array_rand($webhook_files)];
+    $webhook_file_path = "./webhooks/$filename";
+
+    $body = file_get_contents($webhook_file_path);
+
+    if (empty($body)) {
+        Logger::log("issue reading saved webhook file: $filename");
+        exit('issue reading saved webhook');
+    }
+
+    $response = process_webhook($body);
+
+    if ($response === 0) {
+        Logger::log("\$id returned 0 for processing webhook file: $filename");
+        exit("Something went wrong processing webhook. Check Coach's logs.");
+    }
+
+    echo $response;
+    unlink($webhook_file_path); // Delete webhook file after processing.
+}
+
+/**
+ * Process a webhook.
+ * 
+ * @since 1.0.0
+ * @since 1.2.0 renamed function.
+ */
+function process_webhook($body)
+{
+    $time_start = microtime(true);
+
     $body = json_decode($body, true);
     $webhook_id = $body['id'] ?? '';
 
@@ -62,7 +157,7 @@ function init()
     $user_email = $user_data['email'] ?? '';
     if (in_array($user_email, excludedEmails()) || empty($user_email)) {
         Logger::log("This email address is excluded. User email: $user_email");
-        exit('excluded email');
+        return ('excluded email'); // Return a value so that the webhook file will be deleted.
     }
 
     /**
@@ -71,7 +166,7 @@ function init()
     $domain = $install['url'] ?? '';
     if (isExcludedTLD($domain)) {
         Logger::log("This is a development domain. Domain: $domain");
-        exit("development domain");
+        return ('development domain'); // Return a value so that the webhook file will be deleted.
     }
 
     $contactCreate = new CreateContact($plugin_id);
@@ -83,7 +178,7 @@ function init()
      */
     if (empty($product)) {
         Logger::log('This Product ID was not found in array of available IDs in productIDs() function.', $body);
-        exit("product id not found in array");
+        exit('product id not found in array');
     }
 
     $installed_tag = $product . '-installed';
@@ -139,18 +234,20 @@ function init()
     }
 
     http_response_code(200);
+
+    $time_end = microtime(true);
+    $duration = $time_end - $time_start;
+    Logger::log("Webhook #$webhook_id execution duration: $duration");
+
     /**
      * This will be 0/null if: 
      * 
      * The username and password set for the Client is wrong. 
      * The URL you set for the Mautic API is wrong.
      * The contact email is in the excluded list.
+     * Trying to update a user ID that does not exist.
      */
-    echo json_encode($id);
-
-    $time_end = microtime(true);
-    $duration = $time_end - $time_start;
-    Logger::log("Webhook #$webhook_id execution duration: $duration");
+    return $id;
 }
 
 // ------ 
