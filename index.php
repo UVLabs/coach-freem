@@ -95,10 +95,13 @@ function check_webhooks(): void
     }
 
     /**
-     * Grab random key so that if a webhook file has trouble processing we don't end up
-     * trying to process the same file over and over.
+     * Grab webhooks in order so that install.installed action can happen before others.
+     * If we don't do this then there's a chance the user can get wrongly tagged. 
+     * Example in case where a deactivated tag event happens after an uninstalled event. 
+     * The user will have the deactivated tag and uninstalled tag when really they should just have the uninstalled tag.
      */
-    $filename = $webhook_files[array_rand($webhook_files)];
+    asort($webhook_files);
+    $filename = current($webhook_files);
     $webhook_file_path = "./webhooks/$filename";
 
     $body = file_get_contents($webhook_file_path);
@@ -137,6 +140,13 @@ function process_webhook($body)
     if (empty($user_data)) {
         Logger::log("No user data recieved in the webhook #$webhook_id");
         exit('no user data');
+    }
+
+    /**
+     * Only opted in contacts please...
+     */
+    if (empty($user_data['is_marketing_allowed'])) {
+        return ('user didn\'t opt into marketing');
     }
 
     $install = $body['objects']['install'] ?? array();

@@ -58,6 +58,7 @@ class Update extends BaseContacts
 		$id = (int) $this->user_data['id'];
 		$contact_details = $this->findContactDetailsByFreemiusID($id);
 		if (empty($contact_details)) {
+			$this->logger::log("Issue updating contact tags. No contact details returned for user id: $id");
 			return 0;
 		}
 		$contact_id = $contact_details['id'];

@@ -14,7 +14,6 @@
 namespace CoachFreem\Contacts;
 
 use CoachFreem\Contacts\Base as BaseContacts;
-use CoachFreem\Logger;
 use CoachFreem\Segments\Base as BaseSegments;
 
 /**
@@ -117,7 +116,7 @@ class Create extends BaseContacts
         $mautic_id = $response[$this->client->itemName()]['id'] ?? null;
 
         if (empty($mautic_id)) {
-            Logger::log("Mautic response does not contain user ID. Response received: \n\n" . json_encode($response, JSON_PRETTY_PRINT), $user_data);
+            $this->logger::log("Mautic response does not contain user ID. Response received: \n\n" . json_encode($response, JSON_PRETTY_PRINT), $user_data);
         }
 
         return $mautic_id;
@@ -209,13 +208,9 @@ class Create extends BaseContacts
     public function add(array $user_data): ?int
     {
 
-        if (empty($user_data['is_marketing_allowed'])) {
-            return null; // Only opted in contacts please...
-        }
-
         $id = $this->addContactToMautic($user_data);
         if (empty($id)) {
-            Logger::log("Empty contact ID received from Mautic API.");
+            $this->logger::log("Empty contact ID received from Mautic API when trying to add contact. User Data: \n\n" . print_r($user_data, true));
             return null;
         }
 

@@ -42,6 +42,14 @@ class Base
   protected \Mautic\Api\Contacts $client;
 
   /**
+   * Logging class.
+   * 
+   * @var Logger
+   * @since 1.2.0
+   */
+  protected Logger $logger;
+
+  /**
    * Contructor.
    * 
    * @return void 
@@ -50,6 +58,7 @@ class Base
   public function __construct()
   {
     $this->client = (new Client(self::CONTEXT))->getClient();
+    $this->logger = new Logger;
   }
 
   /**
