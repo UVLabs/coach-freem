@@ -252,6 +252,7 @@ function process_webhook($body)
     /**
      * This will be 0/null if: 
      * 
+     * Event type didn't fall within switch statement.
      * The username and password set for the Client is wrong. 
      * The URL you set for the Mautic API is wrong.
      * The contact email is in the excluded list.
