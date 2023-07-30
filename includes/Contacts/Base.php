@@ -14,6 +14,8 @@
 namespace CoachFreem\Contacts;
 
 use CoachFreem\Client;
+use CoachFreem\Logger;
+use Exception;
 
 /**
  * Base contacts class.
@@ -40,6 +42,14 @@ class Base
   protected \Mautic\Api\Contacts $client;
 
   /**
+   * Logging class.
+   * 
+   * @var Logger
+   * @since 1.2.0
+   */
+  protected Logger $logger;
+
+  /**
    * Contructor.
    * 
    * @return void 
@@ -48,18 +58,32 @@ class Base
   public function __construct()
   {
     $this->client = (new Client(self::CONTEXT))->getClient();
+    $this->logger = new Logger;
   }
 
   /**
    * Get a contact details using email address.
    * 
-   * @param array $user_data 
+   * @param int $id The freemius ID. 
    * @return array 
    * @since 1.1.0
+   * @throws Exception 
    */
-  protected function findContactDetailsByEmail(string $email): array
+  protected function findContactDetailsByFreemiusID(int $freemius_id): array
   {
-    $response = $this->client->getList($email);
+    try {
+      $response = $this->client->getList(
+        "freemius_id:{$freemius_id}",
+        0,
+        1
+      );
+    } catch (\Throwable $th) {
+      Logger::log("Error checking existing contact. Freemius ID: $freemius_id, Error Msg: " . $th->getMessage());
+      return array();
+    }
+    if (!is_array($response) && empty($response)) {
+      return array();
+    }
     $id = array_key_first($response['contacts']);
     return $response['contacts'][$id] ?? array();
   }

@@ -13,31 +13,140 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
- * @version 1.1.3
+ * @version 1.2.0
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
 use CoachFreem\Contacts\Update as UpdateContact;
-use Google\CloudFunctions\FunctionsFramework;
-use Psr\Http\Message\ServerRequestInterface;
+use CoachFreem\Logger;
 
+define('ABSPATH', dirname(__FILE__));
+require 'vendor/autoload.php';
+init();
 
-// Register the function with Functions Framework.
-// This enables omitting the `FUNCTIONS_SIGNATURE_TYPE=http` environment
-// variable when deploying. The `FUNCTION_TARGET` environment variable should
-// match the first parameter.
-FunctionsFramework::http('init', 'init');
-
-function init(ServerRequestInterface $request): string
+/**
+ * Start Coach Freem.
+ * 
+ * @return void 
+ * @since 1.2.0
+ */
+function init()
 {
 
-    $body = $request->getBody()->getContents();
+    $save = $_GET['save'] ?? false;
+    $process = $_GET['process'] ?? false;
+
+    if ($save) {
+        save_webhook();
+    }
+
+    if ($process) {
+        check_webhooks();
+    }
+}
+
+/**
+ * Save a webhook to the file system.
+ * 
+ * @return void 
+ * @since 1.2.0
+ */
+function save_webhook(): void
+{
+
+    $time_start = microtime(true);
+
+    $body_json = file_get_contents("php://input");
+
+    $body_array = json_decode($body_json, true);
+
+    $webhook_id = $body_array['id'] ?? time();
+
+    $name = "webhook_$webhook_id";
+    $saved = file_put_contents("./webhooks/$name.json", $body_json . PHP_EOL, LOCK_EX);
+
+    if ($saved) {
+        echo 'success';
+    } else {
+        Logger::log("There was an issue saving the webhook to file: #$webhook_id");
+        echo 'failed';
+        exit();
+    }
+
+    $time_end = microtime(true);
+    $duration = $time_end - $time_start;
+
+    Logger::log("Webhook #$webhook_id save duration: $duration");
+}
+
+/**
+ * Check saved webhooks and process one.
+ * 
+ * @return void 
+ * @since 1.2.0
+ */
+function check_webhooks(): void
+{
+
+    $webhook_files = array_diff(scandir('./webhooks/'), array('.', '..', '.gitkeep'));
+
+    if (empty($webhook_files)) {
+        exit('no pending webhooks found to process');
+    }
+
+    /**
+     * Grab webhooks in order so that install.installed action can happen before others.
+     * If we don't do this then there's a chance the user can get wrongly tagged. 
+     * Example in case where a deactivated tag event happens after an uninstalled event. 
+     * The user will have the deactivated tag and uninstalled tag when really they should just have the uninstalled tag.
+     */
+    asort($webhook_files);
+    $filename = current($webhook_files);
+    $webhook_file_path = "./webhooks/$filename";
+
+    $body = file_get_contents($webhook_file_path);
+
+    if (empty($body)) {
+        Logger::log("issue reading saved webhook file: $filename");
+        exit('issue reading saved webhook');
+    }
+
+    $response = process_webhook($body);
+
+    if ($response === 0) {
+        Logger::log("\$id returned 0 for processing webhook file: $filename");
+        exit("Something went wrong processing webhook. Check Coach's logs.");
+    }
+
+    echo $response;
+    unlink($webhook_file_path); // Delete webhook file after processing.
+}
+
+/**
+ * Process a webhook.
+ * 
+ * @since 1.0.0
+ * @since 1.2.0 renamed function.
+ */
+function process_webhook($body)
+{
+    $time_start = microtime(true);
+
     $body = json_decode($body, true);
+    $webhook_id = $body['id'] ?? '';
 
     $user_data = $body['objects']['user'] ?? '';
 
     if (empty($user_data)) {
-        return 'no user data';
+        Logger::log("No user data recieved in the webhook #$webhook_id");
+        exit('no user data');
+    }
+
+    /**
+     * Only opted in contacts please...
+     */
+    if (empty($user_data['is_marketing_allowed'])) {
+        return ('user didn\'t opt into marketing');
     }
 
     $install = $body['objects']['install'] ?? array();
@@ -46,7 +155,8 @@ function init(ServerRequestInterface $request): string
     $plugin_id = $body['plugin_id'] ?? '';
 
     if (empty($plugin_id)) {
-        return 'plugin id empty';
+        Logger::log('Plugin ID value in webhook is empty.', $body);
+        exit('plugin id empty');
     }
 
     $event_type = $body['type'] ?? '';
@@ -56,7 +166,8 @@ function init(ServerRequestInterface $request): string
      */
     $user_email = $user_data['email'] ?? '';
     if (in_array($user_email, excludedEmails()) || empty($user_email)) {
-        return 'excluded email';
+        Logger::log("This email address is excluded. User email: $user_email");
+        return ('excluded email'); // Return a value so that the webhook file will be deleted.
     }
 
     /**
@@ -64,7 +175,8 @@ function init(ServerRequestInterface $request): string
      */
     $domain = $install['url'] ?? '';
     if (isExcludedTLD($domain)) {
-        return "development domain";
+        Logger::log("This is a development domain. Domain: $domain");
+        return ('development domain'); // Return a value so that the webhook file will be deleted.
     }
 
     $contactCreate = new CreateContact($plugin_id);
@@ -75,7 +187,8 @@ function init(ServerRequestInterface $request): string
      * Bail if the plugin ID received is not in the array provided in productIDs()
      */
     if (empty($product)) {
-        return "product id not found in array";
+        Logger::log('This Product ID was not found in array of available IDs in productIDs() function.', $body);
+        exit('product id not found in array');
     }
 
     $installed_tag = $product . '-installed';
@@ -130,14 +243,22 @@ function init(ServerRequestInterface $request): string
             break;
     }
 
+    http_response_code(200);
+
+    $time_end = microtime(true);
+    $duration = $time_end - $time_start;
+    Logger::log("Webhook #$webhook_id execution duration: $duration");
+
     /**
-     * This will return null if: 
+     * This will be 0/null if: 
      * 
+     * Event type didn't fall within switch statement.
      * The username and password set for the Client is wrong. 
      * The URL you set for the Mautic API is wrong.
      * The contact email is in the excluded list.
+     * Trying to update a user ID that does not exist.
      */
-    return json_encode($id);
+    return $id;
 }
 
 // ------ 
@@ -178,25 +299,21 @@ function productIDs(): array
  */
 function customContactDataMappings(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
-     * Edit this array with your current plugin ids.
+     * Edit the $hold array with your custom mappings.
      */
-    return array(
-        $product_id['kikote'] => array(
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'id' => 'freemius_id',
-            'gross' => 'kikote_gross',
-        ),
-        $product_id['dps'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'dps_gross',
-        ),
-        $product_id['printus'] => array(
-            'id' => 'freemius_id',
-            'gross' => 'printus_gross',
-        ),
-    );
+            'gross' => $product_name . '_gross',
+        );
+    }
+
+    return $hold;
 }
 
 /**
@@ -237,40 +354,26 @@ function contactSegments(): array
  */
 function contactTags(): array
 {
-    $product_id = productIDs();
+    $product_ids = productIDs();
+
+    $hold = array();
 
     /**
      * Edit this array with your current plugin ids.
      */
-    return array(
-        $product_id['kikote'] => array( // Edit this ID with your plugin ID
+    foreach ($product_ids as $product_name => $product_id) {
+        $hold[$product_id] = array(
             'free-users-tags' => array(
-                'kikote-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
+                $product_name . '-free-user', // Edit these tags with the tag that should be set for Free users. You can add more tags to this sub array.
             ),
             'premium-users-tags' => array(
-                'kikote-pro-user' // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
+                $product_name . '-pro-user', // Edit these tags with the tag that should be set for Premium users. You can add more tags to this sub array.
             ),
-            'kikote-user', // You can set additional tags that you want attached to a contact other than the free/pro ones.
-        ),
-        $product_id['dps'] => array(
-            'free-users-tags' => array(
-                'dps-free-user'
-            ),
-            'premium-users-tags' => array(
-                'dps-pro-user'
-            ),
-            'dps-user'
-        ),
-        $product_id['printus'] => array(
-            'free-users-tags' => array(
-                'printus-free-user'
-            ),
-            'premium-users-tags' => array(
-                'printus-pro-user'
-            ),
-            'printus-user'
-        ),
-    );
+            $product_name . '-user'  // You can set additional tags that you want attached to a contact other than the free/pro ones.
+        );
+    }
+
+    return $hold;
 }
 
 /**
@@ -304,6 +407,7 @@ function excludedTLDs(): array
         'dev',
         'instawp.xyz',
         'instawp.co',
+        'instawp.com',
         'instawp.link',
         'dev.cc',
         'test',

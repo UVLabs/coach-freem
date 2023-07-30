@@ -79,25 +79,13 @@ class Create extends BaseContacts
      */
     private function mapWebHookData(array $user_data): array
     {
-        $mautic_field_list = $this->client->getFieldList();
+
         $plugin_custom_mappings = $this->custom_mappings[$this->plugin_id];
 
         $hold = array();
 
-        foreach ($mautic_field_list as $index => $data) {
-
-            $field_name = $data['alias'] ?? '';
-
-            if (empty($field_name)) {
-                continue;
-            }
-
-            $hold[$field_name] = $user_data[$field_name] ?? '';
-
-            $mapping = array_search($field_name, $plugin_custom_mappings, true);
-            if (!empty($mapping)) {
-                $hold[$field_name] = $user_data[$mapping];
-            }
+        foreach ($plugin_custom_mappings as $key => $mapping) {
+            $hold[$mapping] = $user_data[$key];
         }
 
         return $hold;
@@ -115,9 +103,23 @@ class Create extends BaseContacts
         $contact_data = $this->mapWebHookData($user_data);
         $contact_data['tags'] = $this->prepareContactTags($user_data);
 
+        // If contact exists already then update values.
+        $existing_contact = $this->findContactDetailsByFreemiusID((int) $user_data['id']);
+        if ($existing_contact) {
+            $contact_details = $this->client->edit($existing_contact['id'], $contact_data);
+            return $contact_details['contact']['id'] ?? null;
+        }
+
+        $contact_data['email'] = $user_data['email'];
         $response = $this->client->create($contact_data);
 
-        return $response[$this->client->itemName()]['id'] ?? null;
+        $mautic_id = $response[$this->client->itemName()]['id'] ?? null;
+
+        if (empty($mautic_id)) {
+            $this->logger::log("Mautic response does not contain user ID. Response received: \n\n" . json_encode($response, JSON_PRETTY_PRINT), $user_data);
+        }
+
+        return $mautic_id;
     }
 
     /**
@@ -206,17 +208,13 @@ class Create extends BaseContacts
     public function add(array $user_data): ?int
     {
 
-        if (empty($user_data['is_marketing_allowed'])) {
-            return null; // Only opted in contacts please...
-        }
-
         $id = $this->addContactToMautic($user_data);
         if (empty($id)) {
+            $this->logger::log("Empty contact ID received from Mautic API when trying to add contact. User Data: \n\n" . print_r($user_data, true));
             return null;
         }
 
         $this->addContactToSegment($id);
-
         return $id;
     }
 }

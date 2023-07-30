@@ -55,9 +55,10 @@ class Update extends BaseContacts
 	 */
 	public function updateContactTags(array $add_tags = array(), array $remove_tags = array()): int
 	{
-		$email = $this->user_data['email'];
-		$contact_details = $this->findContactDetailsByEmail($email);
+		$id = (int) $this->user_data['id'];
+		$contact_details = $this->findContactDetailsByFreemiusID($id);
 		if (empty($contact_details)) {
+			$this->logger::log("Issue updating contact tags. No contact details returned for user id: $id");
 			return 0;
 		}
 		$contact_id = $contact_details['id'];
