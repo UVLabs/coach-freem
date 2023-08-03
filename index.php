@@ -13,7 +13,7 @@
  * @link    https://uriahsvictor.com
  * @since   1.0.1
  * @license GPLv2
- * @version 1.2.0
+ * @version 1.2.1
  */
 
 use CoachFreem\Contacts\Create as CreateContact;
@@ -139,14 +139,14 @@ function process_webhook($body)
 
     if (empty($user_data)) {
         Logger::log("No user data recieved in the webhook #$webhook_id");
-        exit('no user data');
+        return ('no user data'); // Return a value so that the webhook file will be deleted.
     }
 
     /**
      * Only opted in contacts please...
      */
     if (empty($user_data['is_marketing_allowed'])) {
-        return ('user didn\'t opt into marketing');
+        return ('user didn\'t opt into marketing'); // Return a value so that the webhook file will be deleted.
     }
 
     $install = $body['objects']['install'] ?? array();
@@ -155,8 +155,8 @@ function process_webhook($body)
     $plugin_id = $body['plugin_id'] ?? '';
 
     if (empty($plugin_id)) {
-        Logger::log('Plugin ID value in webhook is empty.', $body);
-        exit('plugin id empty');
+        Logger::log("Plugin ID value in webhook is empty for webhook #$webhook_id", $body);
+        return('plugin id empty'); // Return a value so that the webhook file will be deleted.
     }
 
     $event_type = $body['type'] ?? '';
@@ -242,8 +242,6 @@ function process_webhook($body)
             $id = 0;
             break;
     }
-
-    http_response_code(200);
 
     $time_end = microtime(true);
     $duration = $time_end - $time_start;
