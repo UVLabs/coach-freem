@@ -1,9 +1,9 @@
 <?php
 
 /**
- * Coach Freem adds contacts to Mautic when they install a freemius plugin. 
+ * Coach Freem adds and updates contacts in Mautic when they install a freemius plugin. 
  *
- * His tasks should be kept limited(hopefully). Currently his only task is creating a contact.
+ * His tasks should be kept limited(hopefully).
  *
  * That might change in the future.
  * 
